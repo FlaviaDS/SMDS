@@ -1,0 +1,801 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+#library("readxl")
+#data <- read_excel("D:\\DSSC\\1semester-Courses\\SMDS\\final project\\train.data.xlsx")
+
+data <- read.csv("C:/Users/Flavia/Documents/DSSC/Statistical methods/Exam/mydata3_FINALE.csv")
+data$Date <- as.Date(data$Date)
+
+
+data$log_Recovered_today <- log(data$Recovered_today)
+#data$log_Test_today <- log(data$Test_today)
+#data$Test_today_1000 <- data$Test_today/1000
+data$log10_Variation_cases <- log10(data$Variation_cases)
+
+
+d.train <- data[1:135 ,] #13th Jan 
+d.train
+
+#to check the plot without outliers
+d.train.new <- d.train[-c(93,116,128),]
+
+d.test <- data[136:145 ,] #14th to 23th jan
+d.test
+
+
+```
+
+```{r}
+
+library(PerformanceAnalytics)
+
+
+chart.Correlation(d.train[ ,c("Intensive_care", "Hos_symp","Total_Hos","Home_con",
+                              "Total_pos")])
+
+# removing Total_Hos- Total_pos
+chart.Correlation(d.train[ ,c("Intensive_care","Hos_symp","Home_con",
+                          "Variation_pos","Variation_cases","Recovered_today","Death_today","Test_today",
+                          "People_today")])
+
+
+# removing Home_con
+chart.Correlation(d.train[ ,c("Intensive_care","Hos_symp",
+                          "Variation_pos","Variation_cases","Recovered_today","Death_today","Test_today",
+                          "People_today")])
+
+
+#removing Variation_pos - People_today
+chart.Correlation(d.train[ ,c("Intensive_care","Hos_symp",
+                           "Variation_cases","Recovered_today","Death_today","Test_today")])
+
+
+
+#removing Variation_pos - Hos_symp- People_today
+#this variables are used to build the model:
+#chart.Correlation(d.train[ ,c("Intensive_care","Variation_cases",
+                             # "Recovered_today","Death_today","Test_today")])
+
+
+#checking the relations between removed variables
+
+plot(d.train$Hos_symp, d.train$Total_Hos, col=4, lwd=2, xlab="Hospitalised with symptoms",
+     ylab="Total hospitalised")
+
+plot(d.train$Home_con, d.train$Hos_symp, col=4, lwd=2, xlab="Home confinement", ylab="Hospitalised with symptoms")
+
+plot(d.train$Total_pos, d.train$Hos_symp, col=4, lwd=2, xlab="Total positives", ylab="Hospitalised with symptoms")
+
+
+plot(d.train$People_today, d.train$Test_today, col=4, lwd=2, xlab="People_today", ylab="Test_today" )
+
+
+
+plot(d.train$People_today, d.train$Intensive_care, col=2, lwd=2, xlab="People_today", ylab="Intensive_care" )
+
+plot(d.train$Variation_pos, d.train$Intensive_care, col=2, lwd=2, xlab="Variation_pos", ylab="Intensive_care")
+plot(d.train.new$Variation_pos, d.train.new$Intensive_care, col=2, lwd=2, xlab="Variation_pos", ylab="Intensive_care", sub = "After removing 3 outliers")
+
+```
+``` {r}
+#relationship between response variable and covariates
+
+
+#Date
+plot(d.train$Date, d.train$Intensive_care , col=2, lwd=2)
+
+#Hos_symp
+plot(d.train$Hos_symp, d.train$Intensive_care , col=2, lwd=2)
+
+#Variation_cases
+plot(d.train$Variation_cases, d.train$Intensive_care , col=2, lwd=2)
+plot(d.train$log10_Variation_cases, d.train$Intensive_care , col=2, lwd=2)
+
+library(ggplot2)
+ggplot(d.train, aes(Variation_cases,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,2, raw=TRUE))
+
+ggplot(d.train, aes(Variation_cases,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,3, raw=TRUE))
+
+
+ggplot(d.train, aes(Variation_cases,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,4, raw=TRUE))
+
+
+ggplot(d.train, aes(log10_Variation_cases,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,2, raw=TRUE))
+
+
+
+#Recovered_today
+plot(d.train$Recovered_today, d.train$Intensive_care , col=2, lwd=2)
+plot(d.train.new$Recovered_today, d.train.new$Intensive_care , col=2, lwd=2, sub ="After removing 3 outliers" )
+
+#Death_today
+plot(d.train$Death_today, d.train$Intensive_care , col=2, lwd=2)
+ggplot(d.train, aes(Death_today,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,3, raw=TRUE))
+
+ggplot(d.train, aes(Death_today,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,2, raw=TRUE))
+
+
+#Test_today
+plot(d.train$Test_today, d.train$Intensive_care , col=2, lwd=2)
+```
+
+```{r}
+#all the dataset plots
+
+#Date
+plot(data$Date, data$Intensive_care , col=2, lwd=2, main = " train and test dataset")
+
+#Hos_symp
+plot(data$Hos_symp, data$Intensive_care , col=2, lwd=2, main = " train and test dataset")
+
+#Variation_cases
+plot(data$Date, data$Variation_cases, col=2, lwd=2, main = " train and test dataset")
+plot(d.train$log10_Variation_cases, d.train$Intensive_care , col=2, lwd=2)
+
+library(ggplot2)
+ggplot(data, aes(Variation_cases,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,2, raw=TRUE))
+
+ggplot(data, aes(Variation_cases,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,3, raw=TRUE))
+
+#Recovered_today
+plot(data$Recovered_today, data$Intensive_care , col=2, lwd=2, main = " train and test dataset")
+plot(data$log_Recovered_today, data$Intensive_care , col=2, lwd=2, main = " train and test dataset")
+
+#Death_today
+plot(data$Death_today, data$Intensive_care , col=2, lwd=2, main = " train and test dataset")
+ggplot(data, aes(Death_today,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,3, raw=TRUE))
+
+ggplot(data, aes(Death_today,Intensive_care ))+
+  geom_point()+
+  stat_smooth(method= glm, formula= y~ poly(x,2, raw=TRUE))
+
+#Test_today
+plot(data$Test_today, data$Intensive_care , col=2, lwd=2, main = " train and test dataset")
+
+```
+```{r}
+#baseline model
+
+glm0 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp, 
+            family = poisson, data=d.train)
+
+summary(glm0)
+AIC <- round(AIC(glm0),2)
+BIC <- round(BIC(glm0),2)
+Residual_deviance <- round(glm0$deviance,2)
+
+P_value <- pchisq(glm0$deviance,glm0$df.residual, lower.tail = F)
+
+data.frame(AIC, BIC, Residual_deviance,P_value)
+
+library(DAAG)
+vif(glm0)
+
+```
+
+we add `Death_today`
+
+```{r}
+#adding Death_today
+
+model.glm <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   poly(Death_today,3), family = poisson, data=d.train)
+summary(model.glm)
+AIC <- round(AIC(model.glm),2)
+BIC <- round(BIC(model.glm),2)
+Residual_deviance <- round(model.glm$deviance,2)
+
+#P_value <- pchisq(model.glm$deviance,model.glm$df.residual, lower.tail = F)
+
+data.frame(AIC, BIC, Residual_deviance)
+
+vif(model.glm)
+
+```
+we dont add `Recovered_today` due to negligible improvement in AIC
+```{r}
+#adding Recovered_today
+
+model.glm <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+ 
+                   poly(Death_today,3)+Recovered_today, family = poisson, data=d.train)
+summary(model.glm)
+AIC <- round(AIC(model.glm),2)
+BIC <- round(BIC(model.glm),2)
+Residual_deviance <- round(model.glm$deviance,2)
+
+#P_value <- pchisq(model.glm$deviance,model.glm$df.residual, lower.tail = F)
+
+data.frame(AIC, BIC, Residual_deviance)
+
+vif(model.glm)
+```
+
+
+we dont add `Test_today` due to VIF greater than 10 for some variables.
+```{r}
+# adding Test_today
+
+model.glm <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+ 
+                   poly(Death_today,3)+Test_today, family = poisson, data=d.train)
+
+summary(model.glm)
+AIC <- round(AIC(model.glm),2)
+BIC <- round(BIC(model.glm),2)
+Residual_deviance <- round(model.glm$deviance,2)
+
+#P_value <- pchisq(model.glm$deviance,model.glm$df.residual, lower.tail = F)
+
+data.frame(AIC, BIC, Residual_deviance)
+
+vif(model.glm)
+```
+we also tried the reverse process:first adding Test then adding Recovered, the result was the same both of them should not be included in the model.
+
+
+``` {r}
+#glm model
+
+model.glm <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+ 
+                   poly(Death_today,3), family = poisson, data=d.train)
+
+summary(model.glm)
+AIC <- round(AIC(model.glm),2)
+BIC <- round(BIC(model.glm),2)
+Residual_deviance <- round(model.glm$deviance,2)
+
+P_value <- pchisq(model.glm$deviance,model.glm$df.residual, lower.tail = F)
+
+data.frame(AIC, BIC, Residual_deviance, P_value)
+
+vif(model.glm)
+
+# #pearson residuals
+# p.glm <- residuals(model.glm , type="pearson")
+# plot(model.glm$fitted.values, p.glm)
+
+
+plot(model.glm, which = c(5))
+#standardized residuals
+z.glm <- (d.train$Intensive_care- model.glm$fitted.values)/sqrt(model.glm$fitted.values)
+plot(model.glm$fitted.values,z.glm, xlab = "Fitted values", ylab = "Std. residuals", main = "Standardized residuals- GLM model")
+abline(h=-1.96, col="red")
+abline(h=1.96, col="red")
+
+par(mfrow=c(2,2))
+plot(model.glm, which = c(1,3,2,4))
+
+
+
+```
+
+The above glm model is overdispersed. So we try other models:
+``` {r}
+# quasi piosson
+
+model.glm.quasi <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+ 
+                   poly(Death_today,3), family = quasipoisson, data=d.train)
+
+summary(model.glm.quasi)
+
+
+#pearson residuals
+# p.glm.quasi <- residuals(model.glm.quasi , type="pearson")
+# plot(model.glm.quasi$fitted.values, p.glm.quasi)
+
+
+plot(model.glm.quasi, which = c(5))
+#standardized residuals
+z.glm.quasi <- (d.train$Intensive_care-model.glm.quasi$fitted.values)/
+  sqrt(summary(model.glm.quasi)$dispersion * model.glm.quasi$fitted.values)
+
+plot(model.glm.quasi$fitted.values,z.glm.quasi, xlab = "Fitted values", ylab = "std. residuals", main = "Standardized residuals- Quasipoisson model", ylim=c(-3,4))
+abline(h=-1.96, col="red")
+abline(h=1.96, col="red")
+
+par(mfrow=c(2,2))
+plot(model.glm.quasi, which = c(1,3,2,4))
+
+
+```
+
+
+
+```{r}
+# nb
+library(MASS)
+
+model.glm.nb <- glm.nb(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   poly(Death_today,3), data=d.train)
+
+summary(model.glm.nb)
+
+
+#pearson residuals
+ p.glm.nb <- residuals(model.glm.nb , type="pearson")
+ plot(model.glm.nb$fitted.values, p.glm.nb, main="Pearson residuals- NB model")
+
+#standardized residuals
+z.glm.nb <- (d.train$Intensive_care- model.glm.nb$fitted.values)/
+  sqrt(model.glm.nb$fitted.values+ (model.glm.nb$fitted.values)^2/summary(model.glm.nb)$dispersion)
+plot(model.glm.nb$fitted.values,z.glm.nb, xlab = "Fitted values", ylab = "std. residuals", main = "Standardized residuals- NB model")
+abline(h=-1.96, col="red")
+abline(h=1.96, col="red")
+
+
+plot(model.glm.nb, which = c(5))
+
+par(mfrow=c(2,2))
+plot(model.glm.nb, which = c(1,3,2,4))
+
+plot(d.train$Variation_cases, d.train$Intensive_care, xlab = "Variation_cases", ylab="Fitted values")
+points(d.train$Variation_cases, model.glm$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Variation_cases, model.glm.nb$fitted.values, col="green", pch=20, bg="green")
+legend("bottomright", c("GLM","NB"), pch=c(19,20), col=c("blue", "green"))
+
+plot(d.train$Death_today, d.train$Intensive_care, xlab = "Death_today", ylab="Fitted values")
+points(d.train$Death_today, model.glm$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Death_today, model.glm.nb$fitted.values, col="green", pch=20, bg="green")
+legend("bottomright", c("GLM","NB"), pch=c(19,20), col=c("blue", "green"))
+
+plot(d.train$Hos_symp, d.train$Intensive_care, xlab = "Hos_symp", ylab="Fitted values")
+points(d.train$Hos_symp, model.glm$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Hos_symp, model.glm.nb$fitted.values, col="green", pch=20, bg="green")
+legend("bottomright", c("GLM","NB"), pch=c(19,20), col=c("blue", "green"))
+
+```
+we dont need smooth function for Death_today in gam model.
+``` {r}
+#gam0
+library(mgcv)
+
+gam0 <- gam(Intensive_care ~ Date+s(Variation_cases)+ Hos_symp+s(Death_today)
+                   , family = poisson, data=d.train)
+
+summary(gam0)
+gam0$sp
+
+plot(gam0, residuals = T, pch=20)
+```
+
+``` {r}
+# improved gam
+library(mgcv)
+
+model.gam <- gam(Intensive_care ~ Date+s(Variation_cases)+ Hos_symp+Death_today
+                   , family = poisson, data=d.train)
+summary(model.gam)
+model.gam$sp
+
+plot(model.gam, residuals = T, pch=20)
+
+plot(d.train$Variation_cases, d.train$Intensive_care, xlab = "Variation_cases", ylab="Fitted values")
+points(d.train$Variation_cases, model.glm$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Variation_cases, model.gam$fitted.values, col="red", pch=20, bg="red")
+legend("bottomright", c("GLM","GAM"), pch=c(19,20), col=c("blue", "red"))
+
+plot(d.train$Death_today, d.train$Intensive_care, xlab = "Death_today", ylab="Fitted values")
+points(d.train$Death_today, model.glm$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Death_today, model.gam$fitted.values, col="red", pch=20, bg="red")
+legend("bottomright", c("GLM","GAM"), pch=c(19,20), col=c("blue", "red"))
+
+plot(d.train$Hos_symp, d.train$Intensive_care, xlab = "Hos_symp", ylab="Fitted values")
+points(d.train$Hos_symp, model.glm$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Hos_symp, model.gam$fitted.values, col="red", pch=20, bg="red")
+legend("bottomright", c("GLM","GAM"), pch=c(19,20), col=c("blue", "red"))
+
+```
+
+
+```{r}
+#random forest
+library(randomForest)
+model.rf <- randomForest(Intensive_care ~ Date+Variation_cases+Hos_symp+Death_today,
+                         data=d.train, importance=TRUE)
+model.rf
+model.rf$importance
+
+```
+It seems that GAM is the best model.
+``` {r}
+#comparing final models
+aic <- AIC(model.glm,model.glm.quasi, model.glm.nb, model.gam)
+bic <- BIC(model.glm,model.glm.quasi, model.glm.nb, model.gam)
+library(dplyr)
+bic2 <- select(bic, BIC)
+
+cbind.data.frame(aic, bic2)
+
+```
+``` {r}
+#commenting the estimates of gam
+# 
+# exp(model.gam$coefficients %*% c(1,1, mean(d.train$Variation_cases)+100, (mean(d.train$Variation_cases)+100)^2, mean(d.train$Death_today)+(mean(d.train$Death_today))^2+ (mean(d.train$Death_today))^3+ mean(d.train$Test_today))-
+#       exp(model.nb$coefficients %*% c(1,1, mean(d.train$Variation_cases), (mean(d.train$Variation_cases))^2, mean(d.train$Death_today)+(mean(d.train$Death_today))^2+ (mean(d.train$Death_today))^3+ mean(d.train$Test_today))
+# 
+# invlogit(fit.1$coefficients%*%c(1,mean(data$dist)+1))-
+#  invlogit(fit.1$coefficients%*%c(1,mean(data$dist)))
+# 
+# 
+# 
+# plot(d.train$Variation_cases, d.train$Intensive_care, ylim = c(100,500),
+#      xlab="Variation_cases", ylab="The mean number of Intensive care)",
+#      type="n", xaxs="i", yaxs="i", mgp=c(2,.5,0))
+# 
+# curve(exp(cbind(1, 1,x,x^2,50,50^2,50^3,1000) %*% coef(model.glm.nb)), lwd=.5, add=TRUE)
+# curve(exp(cbind(1, 1,x,x^2,50,50^2,50^3,3000) %*% coef(model.glm.nb)), lwd=.5, add=TRUE)
+# 
+# points(d.train$Variation_cases, d.train$Intensive_care, pch=20, cex=.1)
+# text (50, .27, "if As = 0.5", adj=0, cex=.8)
+# text (75, .50, "if As = 1.0", adj=0, cex=.8)
+
+```
+
+``` {r}
+#predictions
+
+pred.glm <- predict(model.glm, d.test, type= "response")
+pred.glm.quasi <- predict(model.glm.quasi, d.test, type= "response")
+pred.glm.nb <- predict(model.glm.nb, d.test, type= "response")
+pred.gam <- predict(model.gam, d.test, type= "response")
+pred.rf <- predict(model.rf, d.test, type = "response")
+cbind.data.frame(d.test$Intensive_care,pred.glm,pred.glm.quasi,pred.glm.nb,pred.gam,pred.rf )
+
+#Mean Squre Error
+MSE.glm <- mean((d.test$Intensive_care-pred.glm)^2)
+MSE.glm.quasi <- mean((d.test$Intensive_care-pred.glm.quasi)^2)
+MSE.glm.nb <- mean((d.test$Intensive_care-pred.glm.nb)^2)
+MSE.gam <- mean((d.test$Intensive_care-pred.gam)^2)
+MSE.rf <- mean((d.test$Intensive_care-pred.rf)^2)
+#RMSE
+RMSE.glm <- sqrt(MSE.glm)
+RMSE.glm.quasi <- sqrt(MSE.glm.quasi)
+RMSE.glm.nb <- sqrt(MSE.glm.nb)
+RMSE.gam <- sqrt(MSE.gam)
+RMSE.rf <- sqrt(MSE.rf)
+#NRMSE
+NRMSE.glm <- (RMSE.glm)/mean(d.test$Intensive_care)
+NRMSE.glm.quasi <- (RMSE.glm.quasi)/mean(d.test$Intensive_care)
+NRMSE.glm.nb <- (RMSE.glm.nb)/mean(d.test$Intensive_care)
+NRMSE.gam <- (RMSE.gam)/mean(d.test$Intensive_care)
+NRMSE.rf <- (RMSE.rf)/mean(d.test$Intensive_care)
+
+models <- c("glm.poisson","glm.quasipoisson","glm.NB","GAM","RF")
+MSE <- c(MSE.glm,MSE.glm.quasi,MSE.glm.nb,MSE.gam,MSE.rf)
+RMSE <- c(RMSE.glm,RMSE.glm.quasi,RMSE.glm.nb,RMSE.gam,RMSE.rf)
+NRMSE <- c(NRMSE.glm,NRMSE.glm.quasi,NRMSE.glm.nb,NRMSE.gam,NRMSE.rf)
+
+data.frame(models,MSE, RMSE,NRMSE)
+
+#library(SimDesign)
+#RMSE(d.test$Intensive, pred.glm, type="CV")
+
+library(ggplot2)
+ ggplot()+ 
+   ggtitle("Predictions from 14th to 23th Jan. 2021")+
+    geom_line(data=d.test, aes(x=Date, y=Intensive_care, color="actual"), size=1)+
+    geom_point(data = d.test,aes(x=Date, y=Intensive_care ))+
+    geom_line(data=d.test, aes(x=Date, y=pred.glm, color="Poisson"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.glm.quasi, color="Quasi Poisson"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.glm.nb, color="Negative Binomial"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.gam, color="GAM"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.rf, color= "RF"), size=1)+
+  geom_point()+
+   scale_color_manual(name= "models", values = c("actual"="green","Poisson"="red", "Quasi Poisson"= "blue", "Negative Binomial"= "orange", "GAM"= "#FF9999" , "RF"="purple"))+
+   xlab("Date") + ylab ("Intensive care") 
+
+# poisson and quasi poisson have the same coefficients. so the same plots
+```
+
+
+
+``` {r}
+#adding new variables
+plot(d.train$Date, d.train$Zone_color,  col=2, lwd=2)
+plot(d.train$Date, d.train$lag_zone_color,  col=2, lwd=2)
+plot(d.train$Zone_color, d.train$Intensive_care, col=2, lwd=2)
+plot(d.train$lag_zone_color, d.train$Intensive_care, col=2, lwd=2)
+
+```
+
+According to gam model, we dont consider a polynomial for `Death_today` in our models.
+```{r}
+#new glm (linear Death_today)
+model.glm1 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today, family = poisson, data=d.train)
+summary(model.glm1)
+aic <- AIC(model.glm1)
+bic <- BIC(model.glm1)
+RD <- model.glm1$deviance
+
+data.frame(aic, bic, RD)
+
+vif(model.glm1)
+```
+
+we add `Zone_color`
+```{r}
+#adding Zone_color
+model.glm1 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today+Zone_color, family = poisson, data=d.train)
+summary(model.glm1)
+aic <- AIC(model.glm1)
+bic <- BIC(model.glm1)
+RD <- model.glm1$deviance
+
+data.frame(aic, bic, RD)
+
+vif(model.glm1)
+
+```
+
+we add `lag_zone_color`
+```{r}
+#adding lag_zone_color
+model.glm1 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color, family = poisson, data=d.train)
+summary(model.glm1)
+aic <- AIC(model.glm1)
+bic <- BIC(model.glm1)
+RD <- model.glm1$deviance
+
+data.frame(aic, bic, RD)
+
+vif(model.glm1)
+
+```
+we add season
+```{r}
+#adding season
+model.glm1 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color+Season, family = poisson, data=d.train)
+summary(model.glm1)
+aic <- AIC(model.glm1)
+bic <- BIC(model.glm1)
+RD <- model.glm1$deviance
+
+data.frame(aic, bic, RD)
+
+vif(model.glm1)
+
+```
+we dont add any interaction.
+```{r}
+#adding interaction
+model.glm1 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color+Season+Season:Hos_symp, family = poisson, data=d.train)
+summary(model.glm1)
+aic <- AIC(model.glm1)
+bic <- BIC(model.glm1)
+RD <- model.glm1$deviance
+
+data.frame(aic, bic, RD)
+
+vif(model.glm1)
+
+```
+
+``` {r}
+#new glm 
+model.glm1 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color+Season, family = poisson, data=d.train)
+summary(model.glm1)
+aic <- AIC(model.glm1)
+bic <- BIC(model.glm1)
+RD <- model.glm1$deviance
+p_val <- pchisq(model.glm1$deviance, model.glm1$df.residual, lower.tail = F)
+
+data.frame(aic, bic, RD, p_val)
+
+vif(model.glm1)
+
+#par(mfrow=c(2,2))
+plot(model.glm1, which = c(1,2,3,4,5))
+
+# #pearson residuals
+# p.glm <- residuals(model.glm , type="pearson")
+# plot(model.glm$fitted.values, p.glm)
+
+#standardized residuals
+z.glm <- (d.train$Intensive_care- model.glm1$fitted.values)/sqrt(model.glm1$fitted.values)
+plot(model.glm1$fitted.values,z.glm, xlab = "Fitted values", ylab = "std. residuals", main = "Standardized residuals- GLM model")
+abline(h=-1.96, col="red")
+abline(h=1.96, col="red")
+
+```
+```{r}
+# new quasi piosson
+model.glm.quasi1 <- glm(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color+Season, family = quasipoisson, data=d.train)
+summary(model.glm.quasi1)
+
+
+
+#par(mfrow=c(2,2))
+plot(model.glm.quasi1, which = c(1,2,3,4,5))
+
+#pearson residuals
+# p.glm.quasi <- residuals(model.glm.quasi , type="pearson")
+# plot(model.glm.quasi$fitted.values, p.glm.quasi)
+
+#standardized residuals
+z.glm.quasi <- (d.train$Intensive_care-model.glm.quasi1$fitted.values)/
+  sqrt(summary(model.glm.quasi1)$dispersion * model.glm.quasi1$fitted.values)
+
+plot(model.glm.quasi1$fitted.values,z.glm.quasi, xlab = "Fitted values", ylab = "std. residuals", main = "Standardized residuals- Quasipoisson model", ylim=c(-3,4))
+abline(h=-1.96, col="red")
+abline(h=1.96, col="red")
+
+```
+
+```{r}
+# nb
+library(MASS)
+model.glm.nb1 <- glm.nb(Intensive_care ~ Date+poly(Variation_cases,2)+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color+Season, 
+                   data=d.train)
+summary(model.glm.nb1)
+
+
+
+#par(mfrow=c(2,2))
+plot(model.glm.nb1, which = c(1,2,3,4,5))
+
+#pearson residuals
+ p.glm.nb <- residuals(model.glm.nb1 , type="pearson")
+ plot(model.glm.nb1$fitted.values, p.glm.nb, main="Pearson residuals- NB model")
+
+#standardized residuals
+z.glm.nb <- (d.train$Intensive_care- model.glm.nb1$fitted.values)/
+  sqrt(model.glm.nb1$fitted.values+ (model.glm.nb1$fitted.values)^2/summary(model.glm.nb1)$dispersion)
+plot(model.glm.nb1$fitted.values,z.glm.nb, xlab = "Fitted values", ylab = "std. residuals", main = "Standardized residuals- NB model")
+abline(h=-1.96, col="red")
+abline(h=1.96, col="red")
+
+
+plot(d.train$Variation_cases, d.train$Intensive_care, xlab = "Variation_cases", ylab="Fitted values")
+points(d.train$Variation_cases, model.glm1$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Variation_cases, model.glm.nb1$fitted.values, col="green", pch=20, bg="green")
+legend("bottomright", c("GLM","NB"), pch=c(19,20), col=c("blue", "green"))
+
+plot(d.train$Death_today, d.train$Intensive_care, xlab = "Death_today", ylab="Fitted values")
+points(d.train$Death_today, model.glm1$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Death_today, model.glm.nb1$fitted.values, col="green", pch=20, bg="green")
+legend("bottomright", c("GLM","NB"), pch=c(19,20), col=c("blue", "green"))
+
+plot(d.train$Hos_symp, d.train$Intensive_care, xlab = "Hos_symp", ylab="Fitted values")
+points(d.train$Hos_symp, model.glm1$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Hos_symp, model.glm.nb1$fitted.values, col="green", pch=20, bg="green")
+legend("bottomright", c("GLM","NB"), pch=c(19,20), col=c("blue", "green"))
+
+```
+``` {r}
+#gam
+library(mgcv)
+
+model.gam1 <- gam(Intensive_care ~ Date+s(Variation_cases)+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color+Season
+                   , family = poisson, data=d.train)
+summary(model.gam1)
+model.gam1$sp
+
+plot(model.gam1, residuals = T, pch=20)
+
+plot(d.train$Variation_cases, d.train$Intensive_care, xlab = "Variation_cases", ylab="Fitted values")
+points(d.train$Variation_cases, model.glm1$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Variation_cases, model.gam1$fitted.values, col="red", pch=20, bg="red")
+legend("bottomright", c("GLM","GAM"), pch=c(19,20), col=c("blue", "red"))
+
+plot(d.train$Death_today, d.train$Intensive_care, xlab = "Death_today", ylab="Fitted values")
+points(d.train$Death_today, model.glm1$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Death_today, model.gam1$fitted.values, col="red", pch=20, bg="red")
+legend("bottomright", c("GLM","GAM"), pch=c(19,20), col=c("blue", "red"))
+
+plot(d.train$Hos_symp, d.train$Intensive_care, xlab = "Hos_symp", ylab="Fitted values")
+points(d.train$Hos_symp, model.glm1$fitted.values,col="blue", pch=19,bg="blue")
+points(d.train$Hos_symp, model.gam1$fitted.values, col="red", pch=20, bg="red")
+legend("bottomright", c("GLM","GAM"), pch=c(19,20), col=c("blue", "red"))
+
+```
+```{r}
+#random forest
+library(randomForest)
+model.rf1 <- randomForest(Intensive_care ~ Date+Variation_cases+Hos_symp+
+                   Death_today+Zone_color+lag_zone_color+Season, data=d.train, importance=TRUE)
+model.rf1
+model.rf1$importance
+
+```
+
+``` {r}
+#comparing final models
+aic <- AIC(model.glm1,model.glm.quasi1, model.glm.nb1, model.gam1)
+bic <- BIC(model.glm1,model.glm.quasi1, model.glm.nb1, model.gam1)
+
+library(dplyr)
+bic2 <- select(bic, BIC)
+
+cbind.data.frame(aic, bic2)
+```
+again gam is the best model.  
+
+``` {r}
+#predictions
+
+pred.glm1 <- predict(model.glm1, d.test, type= "response")
+pred.glm.quasi1 <- predict(model.glm.quasi1, d.test, type= "response")
+pred.glm.nb1 <- predict(model.glm.nb1, d.test, type= "response")
+pred.gam1 <- predict(model.gam1, d.test, type= "response")
+pred.rf1 <- predict(model.rf1, d.test, type = "response")
+cbind.data.frame(d.test$Intensive_care,pred.glm1,pred.glm.quasi1,pred.glm.nb1,pred.gam1,pred.rf1 )
+
+
+#Mean Squre Error
+MSE.glm1 <- mean((d.test$Intensive_care-pred.glm1)^2)
+MSE.glm.quasi1 <- mean((d.test$Intensive_care-pred.glm.quasi1)^2)
+MSE.glm.nb1 <- mean((d.test$Intensive_care-pred.glm.nb1)^2)
+MSE.gam1 <- mean((d.test$Intensive_care-pred.gam1)^2)
+MSE.rf1 <- mean((d.test$Intensive_care-pred.rf1)^2)
+#RMSE
+RMSE.glm1 <- sqrt(MSE.glm1)
+RMSE.glm.quasi1 <- sqrt(MSE.glm.quasi1)
+RMSE.glm.nb1 <- sqrt(MSE.glm.nb1)
+RMSE.gam1 <- sqrt(MSE.gam1)
+RMSE.rf1 <- sqrt(MSE.rf1)
+#NRMSE
+NRMSE.glm1 <- (RMSE.glm1)/mean(d.test$Intensive_care)
+NRMSE.glm.quasi1 <- (RMSE.glm.quasi1)/mean(d.test$Intensive_care)
+NRMSE.glm.nb1 <- (RMSE.glm.nb1)/mean(d.test$Intensive_care)
+NRMSE.gam1 <- (RMSE.gam1)/mean(d.test$Intensive_care)
+NRMSE.rf1 <- (RMSE.rf1)/mean(d.test$Intensive_care)
+
+models <- c("glm.poisson","glm.quasipoisson","glm.NB","GAM","RF")
+MSE <- c(MSE.glm1,MSE.glm.quasi1,MSE.glm.nb1,MSE.gam1,MSE.rf1)
+RMSE <- c(RMSE.glm1,RMSE.glm.quasi1,RMSE.glm.nb1,RMSE.gam1,RMSE.rf1)
+NRMSE <- c(NRMSE.glm1,NRMSE.glm.quasi1,NRMSE.glm.nb1,NRMSE.gam1,NRMSE.rf1)
+
+data.frame(models,MSE, RMSE,NRMSE)
+
+library(ggplot2)
+ ggplot()+ 
+   ggtitle("Predictions from 14th to 23th Jan. 2021")+
+    geom_line(data=d.test, aes(x=Date, y=Intensive_care, color="actual"), size=1)+
+    geom_point(data = d.test,aes(x=Date, y=Intensive_care ))+
+    geom_line(data=d.test, aes(x=Date, y=pred.glm1, color="Poisson"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.glm.quasi1, color="Quasi Poisson"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.glm.nb1, color="Negative Binomial"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.gam1, color="GAM"), size=1)+
+    geom_line(data=d.test, aes(x=Date, y=pred.rf1, color= "RF"), size=1)+
+  
+   scale_color_manual(name= "models", values = c("actual"="green","Poisson"="red", "Quasi Poisson"= "blue", "Negative Binomial"= "orange", "GAM"= "#FF9999" , "RF"="purple"))+
+   xlab("Date") + ylab ("Intensive care") 
+
+# poisson and quasi poisson have the same coefficients. so the same plots
+```
+
