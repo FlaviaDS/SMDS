@@ -1,2 +1,2 @@
 # SMDS
-Statistical method for Data Science
+Statistical Methods for Data Science
